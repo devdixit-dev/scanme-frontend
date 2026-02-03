@@ -170,127 +170,138 @@ const QRGenerator = () => {
   };
 
   return (
-    <section className="py-16">
-      <div className="container max-w-4xl grid md:grid-cols-2 gap-6">
-        {/* INPUT */}
-        <div className="p-10 border rounded-2xl bg-background">
-          <Select
-            value={type}
-            onValueChange={(v) => {
-              setType(v as QRType);
-              setForm({});
-            }}
-          >
-            <SelectTrigger className="h-12 mb-6">
-              <SelectValue placeholder="Select QR type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="url">URL</SelectItem>
-              <SelectItem value="text">Text</SelectItem>
-              <SelectItem value="wifi">WiFi</SelectItem>
-              <SelectItem value="vcard">vCard</SelectItem>
-              <SelectItem value="sms">SMS</SelectItem>
-              <SelectItem value="call">Call</SelectItem>
-              <SelectItem value="mail">Email</SelectItem>
-              <SelectItem value="location">Location</SelectItem>
-              <SelectItem value="event">Event</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="space-y-3 min-h-[260px]">
-            {type === "url" && (
-              <Input placeholder="https://example.com" onChange={(e) => setField("url", e.target.value)} />
-            )}
-
-            {type === "text" && (
-              <Input placeholder="Text" onChange={(e) => setField("text", e.target.value)} />
-            )}
-
-            {type === "wifi" && (
-              <>
-                <Input placeholder="SSID" onChange={(e) => setField("ssid", e.target.value)} />
-                <Input placeholder="Password" onChange={(e) => setField("password", e.target.value)} />
-                <Input placeholder="Encryption (WPA/WEP/nopass)" onChange={(e) => setField("encryption", e.target.value)} />
-              </>
-            )}
-
-            {type === "vcard" && (
-              <>
-                <Input placeholder="First name" onChange={(e) => setField("firstName", e.target.value)} />
-                <Input placeholder="Last name" onChange={(e) => setField("lastName", e.target.value)} />
-                <Input placeholder="Phone" onChange={(e) => setField("phone", e.target.value)} />
-                <Input placeholder="Email" onChange={(e) => setField("email", e.target.value)} />
-                <Input placeholder="Organization" onChange={(e) => setField("organization", e.target.value)} />
-              </>
-            )}
-
-            {type === "sms" && (
-              <>
-                <Input placeholder="Phone number" onChange={(e) => setField("number", e.target.value)} />
-                <Input placeholder="Message" onChange={(e) => setField("message", e.target.value)} />
-              </>
-            )}
-
-            {type === "call" && (
-              <Input placeholder="Phone number" onChange={(e) => setField("number", e.target.value)} />
-            )}
-
-            {type === "mail" && (
-              <>
-                <Input placeholder="Email" onChange={(e) => setField("email", e.target.value)} />
-                <Input placeholder="Subject" onChange={(e) => setField("subject", e.target.value)} />
-                <Input placeholder="Body" onChange={(e) => setField("body", e.target.value)} />
-              </>
-            )}
-
-            {type === "location" && (
-              <>
-                <Input placeholder="Latitude" onChange={(e) => setField("latitude", e.target.value)} />
-                <Input placeholder="Longitude" onChange={(e) => setField("longitude", e.target.value)} />
-              </>
-            )}
-
-            {type === "event" && (
-              <>
-                <Input placeholder="Title" onChange={(e) => setField("title", e.target.value)} />
-                <Input placeholder="Location" onChange={(e) => setField("location", e.target.value)} />
-                <Input placeholder="Start (YYYYMMDDTHHmmss)" onChange={(e) => setField("startDate", e.target.value)} />
-                <Input placeholder="End (YYYYMMDDTHHmmss)" onChange={(e) => setField("endDate", e.target.value)} />
-              </>
-            )}
-          </div>
-
-          {error && <p className="text-sm text-red-500 mt-4">{error}</p>}
-
-          <Button className="w-full mt-6" onClick={handleGenerate} disabled={loading}>
-            {loading ? "Generating..." : "Generate QR"}
-          </Button>
-        </div>
-
-        {/* OUTPUT */}
-        <div className="p-10 border rounded-2xl flex flex-col">
-          <h3 className="font-semibold mb-4">Your QR</h3>
-
-          <div className="flex-1 flex items-center justify-center border rounded-xl mb-6">
-            {qrImage ? (
-              <img src={qrImage} className="w-48 h-48" />
-            ) : (
-              <QrCode className="h-12 w-12 opacity-50" />
-            )}
-          </div>
-
-          <div className="flex gap-3">
-            <Button variant="outline" className="flex-1" onClick={copyUrl} disabled={!qrImage}>
-              {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-              {copied ? "Copied" : "Copy URL"}
-            </Button>
-            <Button className="flex-1" onClick={() => window.open(qrImage || "")} disabled={!qrImage}>
-              <Download className="mr-2 h-4 w-4" /> Download
-            </Button>
-          </div>
-        </div>
+    <div className="container max-w-4xl my-8">
+      <div className="text-center mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          Generate QR Code
+        </h2>
+        <p className="text-muted-foreground">
+          Choose a QR type, fill details, generate instantly
+        </p>
       </div>
-    </section>
+
+      <section className="py-16">
+        <div className="container max-w-4xl grid md:grid-cols-2 gap-6">
+          {/* INPUT */}
+          <div className="p-10 border rounded-2xl bg-background">
+            <Select
+              value={type}
+              onValueChange={(v) => {
+                setType(v as QRType);
+                setForm({});
+              }}
+            >
+              <SelectTrigger className="h-12 mb-6">
+                <SelectValue placeholder="Select QR type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="url">URL</SelectItem>
+                <SelectItem value="text">Text</SelectItem>
+                <SelectItem value="wifi">WiFi</SelectItem>
+                <SelectItem value="vcard">vCard</SelectItem>
+                <SelectItem value="sms">SMS</SelectItem>
+                <SelectItem value="call">Call</SelectItem>
+                <SelectItem value="mail">Email</SelectItem>
+                <SelectItem value="location">Location</SelectItem>
+                <SelectItem value="event">Event</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="space-y-3 min-h-[260px]">
+              {type === "url" && (
+                <Input placeholder="https://example.com" onChange={(e) => setField("url", e.target.value)} />
+              )}
+
+              {type === "text" && (
+                <Input placeholder="Text" onChange={(e) => setField("text", e.target.value)} />
+              )}
+
+              {type === "wifi" && (
+                <>
+                  <Input placeholder="SSID" onChange={(e) => setField("ssid", e.target.value)} />
+                  <Input placeholder="Password" onChange={(e) => setField("password", e.target.value)} />
+                  <Input placeholder="Encryption (WPA/WEP/nopass)" onChange={(e) => setField("encryption", e.target.value)} />
+                </>
+              )}
+
+              {type === "vcard" && (
+                <>
+                  <Input placeholder="First name" onChange={(e) => setField("firstName", e.target.value)} />
+                  <Input placeholder="Last name" onChange={(e) => setField("lastName", e.target.value)} />
+                  <Input placeholder="Phone" onChange={(e) => setField("phone", e.target.value)} />
+                  <Input placeholder="Email" onChange={(e) => setField("email", e.target.value)} />
+                  <Input placeholder="Organization" onChange={(e) => setField("organization", e.target.value)} />
+                </>
+              )}
+
+              {type === "sms" && (
+                <>
+                  <Input placeholder="Phone number" onChange={(e) => setField("number", e.target.value)} />
+                  <Input placeholder="Message" onChange={(e) => setField("message", e.target.value)} />
+                </>
+              )}
+
+              {type === "call" && (
+                <Input placeholder="Phone number" onChange={(e) => setField("number", e.target.value)} />
+              )}
+
+              {type === "mail" && (
+                <>
+                  <Input placeholder="Email" onChange={(e) => setField("email", e.target.value)} />
+                  <Input placeholder="Subject" onChange={(e) => setField("subject", e.target.value)} />
+                  <Input placeholder="Body" onChange={(e) => setField("body", e.target.value)} />
+                </>
+              )}
+
+              {type === "location" && (
+                <>
+                  <Input placeholder="Latitude" onChange={(e) => setField("latitude", e.target.value)} />
+                  <Input placeholder="Longitude" onChange={(e) => setField("longitude", e.target.value)} />
+                </>
+              )}
+
+              {type === "event" && (
+                <>
+                  <Input placeholder="Title" onChange={(e) => setField("title", e.target.value)} />
+                  <Input placeholder="Location" onChange={(e) => setField("location", e.target.value)} />
+                  <Input placeholder="Start (YYYYMMDDTHHmmss)" onChange={(e) => setField("startDate", e.target.value)} />
+                  <Input placeholder="End (YYYYMMDDTHHmmss)" onChange={(e) => setField("endDate", e.target.value)} />
+                </>
+              )}
+            </div>
+
+            {error && <p className="text-sm text-red-500 mt-4">{error}</p>}
+
+            <Button className="w-full mt-6" onClick={handleGenerate} disabled={loading}>
+              {loading ? "Generating..." : "Generate QR"}
+            </Button>
+          </div>
+
+          {/* OUTPUT */}
+          <div className="p-10 border rounded-2xl flex flex-col">
+            <h3 className="font-semibold mb-4">Your QR</h3>
+
+            <div className="flex-1 flex items-center justify-center border rounded-xl mb-6">
+              {qrImage ? (
+                <img src={qrImage} className="w-48 h-48" />
+              ) : (
+                <QrCode className="h-12 w-12 opacity-50" />
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={copyUrl} disabled={!qrImage}>
+                {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                {copied ? "Copied" : "Copy URL"}
+              </Button>
+              <Button className="flex-1" onClick={() => window.open(qrImage || "")} disabled={!qrImage}>
+                <Download className="mr-2 h-4 w-4" /> Download
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 };
 
