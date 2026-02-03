@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { Upload, Copy, Check, Shield, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/scan/upload`
+const API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/scan/upload`;
 
 /* ------------------ user id helper ------------------ */
 const getUserId = () => {
@@ -16,8 +16,132 @@ const getUserId = () => {
 
 /* ------------------ types ------------------ */
 type ScanResult = {
-  type: string;
-  parsed: any;
+  type: "url" | "text" | "wifi" | "vcard" | "sms" | "call" | "mail" | "location" | "event";
+  value: string;
+  fields?: { label: string; value: string; href?: string }[];
+};
+
+const normalizeString = (value: unknown) =>
+  typeof value === "string" ? value.trim() : "";
+
+const buildScanResult = (qrType: ScanResult["type"], decodedData, raw: string): ScanResult => {
+  const decoded = decodedData || {};
+  const safeRaw = normalizeString(raw);
+
+  switch (qrType) {
+    case "url": {
+      const url = normalizeString(decoded.url || decoded.text || safeRaw);
+      return {
+        type: "url",
+        value: url,
+        fields: url ? [{ label: "URL", value: url, href: url }] : undefined,
+      };
+    }
+    case "wifi": {
+      const ssid = normalizeString(decoded.ssid);
+      const password = normalizeString(decoded.password);
+      const encryption = normalizeString(decoded.encryption);
+      const fallback = normalizeString(decoded.text || safeRaw);
+      const value =
+        fallback ||
+        [ssid && `SSID: ${ssid}`, password && `Password: ${password}`, encryption && `Encryption: ${encryption}`]
+          .filter(Boolean)
+          .join(" | ");
+      const fields = [
+        ssid && { label: "SSID", value: ssid },
+        password && { label: "Password", value: password },
+        encryption && { label: "Encryption", value: encryption },
+      ].filter(Boolean) as ScanResult["fields"];
+      return { type: "wifi", value, fields: fields?.length ? fields : undefined };
+    }
+    case "vcard": {
+      const firstName = normalizeString(decoded.firstName);
+      const lastName = normalizeString(decoded.lastName);
+      const phone = normalizeString(decoded.phone);
+      const email = normalizeString(decoded.email);
+      const organization = normalizeString(decoded.organization);
+      const displayName = normalizeString(decoded.text) || [firstName, lastName].filter(Boolean).join(" ");
+      const value = displayName || phone || email || safeRaw;
+      const fields = [
+        displayName && { label: "Name", value: displayName },
+        organization && { label: "Organization", value: organization },
+        phone && { label: "Phone", value: phone, href: `tel:${phone}` },
+        email && { label: "Email", value: email, href: `mailto:${email}` },
+      ].filter(Boolean) as ScanResult["fields"];
+      return { type: "vcard", value, fields: fields?.length ? fields : undefined };
+    }
+    case "sms": {
+      const number = normalizeString(decoded.number);
+      const message = normalizeString(decoded.message);
+      const fallback = normalizeString(decoded.text || safeRaw);
+      const value = fallback || [number, message].filter(Boolean).join(" - ");
+      const fields = [
+        number && { label: "Number", value: number },
+        message && { label: "Message", value: message },
+      ].filter(Boolean) as ScanResult["fields"];
+      return { type: "sms", value, fields: fields?.length ? fields : undefined };
+    }
+    case "call": {
+      const number = normalizeString(decoded.number || decoded.text || safeRaw);
+      return {
+        type: "call",
+        value: number,
+        fields: number ? [{ label: "Phone", value: number, href: `tel:${number}` }] : undefined,
+      };
+    }
+    case "mail": {
+      const email = normalizeString(decoded.email);
+      const subject = normalizeString(decoded.subject);
+      const body = normalizeString(decoded.body);
+      const fallback = normalizeString(decoded.text || safeRaw);
+      const value =
+        fallback ||
+        [email && `Email: ${email}`, subject && `Subject: ${subject}`, body && `Body: ${body}`]
+          .filter(Boolean)
+          .join(" | ");
+      const fields = [
+        email && { label: "Email", value: email, href: `mailto:${email}` },
+        subject && { label: "Subject", value: subject },
+        body && { label: "Body", value: body },
+      ].filter(Boolean) as ScanResult["fields"];
+      return { type: "mail", value, fields: fields?.length ? fields : undefined };
+    }
+    case "location": {
+      const latitude = normalizeString(decoded.latitude);
+      const longitude = normalizeString(decoded.longitude);
+      const fallback = normalizeString(decoded.text || safeRaw);
+      const value = fallback || [latitude, longitude].filter(Boolean).join(", ");
+      const fields = [
+        latitude && { label: "Latitude", value: latitude },
+        longitude && { label: "Longitude", value: longitude },
+      ].filter(Boolean) as ScanResult["fields"];
+      return { type: "location", value, fields: fields?.length ? fields : undefined };
+    }
+    case "event": {
+      const title = normalizeString(decoded.title);
+      const location = normalizeString(decoded.location);
+      const startDate = normalizeString(decoded.startDate);
+      const endDate = normalizeString(decoded.endDate);
+      const fallback = normalizeString(decoded.text || safeRaw);
+      const value =
+        fallback ||
+        [title, location && `Location: ${location}`, startDate && `Start: ${startDate}`, endDate && `End: ${endDate}`]
+          .filter(Boolean)
+          .join(" | ");
+      const fields = [
+        title && { label: "Title", value: title },
+        location && { label: "Location", value: location },
+        startDate && { label: "Start", value: startDate },
+        endDate && { label: "End", value: endDate },
+      ].filter(Boolean) as ScanResult["fields"];
+      return { type: "event", value, fields: fields?.length ? fields : undefined };
+    }
+    case "text":
+    default: {
+      const text = normalizeString(decoded.text || safeRaw || decoded);
+      return { type: "text", value: text || "Unknown content" };
+    }
+  }
 };
 
 const ImageScanner = () => {
@@ -27,6 +151,20 @@ const ImageScanner = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const renderFieldValue = (field: NonNullable<ScanResult["fields"]>[number]) =>
+    field.href ? (
+      <a
+        href={field.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary underline break-all"
+      >
+        {field.value}
+      </a>
+    ) : (
+      <span className="break-all">{field.value}</span>
+    );
 
   /* ---------------- Drag & Drop ---------------- */
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -83,12 +221,19 @@ const ImageScanner = () => {
         throw new Error(result.error || "Scan failed");
       }
 
-      setScannedData({
-        type: result.data.type,
-        parsed: result.data.parsed,
-      });
+      const qrType = (result?.data?.qrType || "text") as ScanResult["type"];
+      const decodedData = result?.data?.decodedData;
+      const rawData = result?.data?.qrData || "";
+
+      const structured = buildScanResult(qrType, decodedData, rawData);
+
+      if (!structured.value) {
+        throw new Error("Unable to extract QR content");
+      }
+
+      setScannedData(structured);
     } catch (err) {
-      console.error(err);
+      console.error("Scan error:", err);
       setError(err.message || "Failed to scan image");
     } finally {
       setIsLoading(false);
@@ -98,15 +243,7 @@ const ImageScanner = () => {
   /* ---------------- Copy ---------------- */
   const handleCopy = () => {
     if (!scannedData) return;
-
-    const text =
-      scannedData.type === "url"
-        ? scannedData.parsed.url
-        : scannedData.type === "text"
-        ? scannedData.parsed.text
-        : JSON.stringify(scannedData.parsed, null, 2);
-
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(scannedData.value);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -115,7 +252,7 @@ const ImageScanner = () => {
     <section id="image-scanner" className="py-16 md:py-20 section-alt">
       <div className="container">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Scan QR code from image
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
@@ -131,8 +268,8 @@ const ImageScanner = () => {
             onDrop={handleDrop}
             className={`
               flex flex-col items-center justify-center p-8 md:p-12
-              border-2 border-dashed rounded-2xl transition-all duration-300
-              bg-background hover:border-primary/50 hover:bg-accent/50
+              border-2 border-dashed rounded-2xl transition-all
+              bg-background hover:border-primary/50
               ${
                 isDragging
                   ? "border-primary bg-accent scale-[1.02]"
@@ -140,9 +277,7 @@ const ImageScanner = () => {
               }
             `}
           >
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl mb-6 bg-accent">
-              <Upload className="h-8 w-8 text-primary" />
-            </div>
+            <Upload className="h-10 w-10 text-primary mb-4" />
 
             <p className="text-lg font-semibold mb-2">Drag & Drop or Browse</p>
             <p className="text-sm text-muted-foreground mb-4">
@@ -160,14 +295,14 @@ const ImageScanner = () => {
             )}
 
             <div className="relative">
-              <Button className="gradient-primary text-primary-foreground">
+              <Button className="gradient-primary">
                 <Image className="h-4 w-4 mr-2" />
                 Browse Files
               </Button>
               <input
                 type="file"
                 accept="image/*"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                className="absolute inset-0 opacity-0 cursor-pointer"
                 onChange={handleInputChange}
               />
             </div>
@@ -176,45 +311,48 @@ const ImageScanner = () => {
               <Button
                 onClick={handleScan}
                 disabled={isLoading}
-                className="mt-4 w-full gradient-primary text-primary-foreground"
+                className="mt-4 w-full gradient-primary"
               >
                 {isLoading ? "Scanning..." : "Submit & Scan"}
               </Button>
             )}
           </div>
 
-          {/* Results */}
-          <div className="flex flex-col p-8 md:p-12 bg-background border border-border rounded-2xl">
+          {/* Result */}
+          <div className="flex flex-col p-8 md:p-12 bg-background border rounded-2xl">
             <h3 className="text-lg font-semibold mb-4">Scanned Data</h3>
 
-            <div className="flex-1 flex items-center justify-center min-h-[120px] bg-scanner-bg rounded-xl border border-scanner-border p-4 mb-6">
+            <div className="flex-1 flex items-center justify-center min-h-[120px] border rounded-xl p-4 mb-6">
               {!scannedData ? (
                 <p className="text-muted-foreground text-sm text-center">
                   Scan a QR code to view the results here
                 </p>
+              ) : scannedData.fields?.length ? (
+                <div className="w-full space-y-2">
+                  {scannedData.fields.map((field) => (
+                    <div key={field.label} className="text-sm">
+                      <span className="text-muted-foreground">{field.label}:</span>{" "}
+                      {renderFieldValue(field)}
+                    </div>
+                  ))}
+                </div>
               ) : scannedData.type === "url" ? (
                 <a
-                  href={scannedData.parsed.url}
+                  href={scannedData.value}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary underline break-all text-sm"
                 >
-                  {scannedData.parsed.url}
+                  {scannedData.value}
                 </a>
-              ) : scannedData.type === "text" ? (
-                <p className="text-foreground text-sm break-all">
-                  {scannedData.parsed.text}
-                </p>
               ) : (
-                <pre className="text-foreground text-sm break-all whitespace-pre-wrap">
-                  {JSON.stringify(scannedData.parsed, null, 2)}
-                </pre>
+                <p className="text-sm break-all">{scannedData.value}</p>
               )}
             </div>
 
             <Button
               variant="outline"
-              className="w-full border-primary text-primary gap-2"
+              className="w-full gap-2"
               onClick={handleCopy}
               disabled={!scannedData}
             >
@@ -233,7 +371,7 @@ const ImageScanner = () => {
 
         <div className="flex items-center justify-center gap-2 mt-8 text-sm text-muted-foreground">
           <Shield className="h-4 w-4 text-primary" />
-          <span>QR decoded locally & securely</span>
+          <span>QR decoded securely</span>
         </div>
       </div>
     </section>

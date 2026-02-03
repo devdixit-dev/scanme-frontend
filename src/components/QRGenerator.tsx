@@ -3,6 +3,7 @@ import { QrCode, Copy, Check, Download, ExternalLink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectTrigger,
@@ -164,10 +165,31 @@ const QRGenerator = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const isValid =
-    (type === "url" && !!form.url) ||
-    (type === "text" && !!form.text) ||
-    type !== "url";
+  /* ---------- VALIDATION ---------- */
+  const isValid = (() => {
+    switch (type) {
+      case "url":
+        return !!form.url;
+      case "text":
+        return !!form.text;
+      case "wifi":
+        return !!form.ssid;
+      case "vcard":
+        return !!(form.firstName || form.lastName || form.phone || form.email);
+      case "sms":
+        return !!form.number;
+      case "call":
+        return !!form.number;
+      case "mail":
+        return !!form.email;
+      case "location":
+        return !!form.latitude && !!form.longitude;
+      case "event":
+        return !!(form.title || form.startDate || form.endDate);
+      default:
+        return false;
+    }
+  })();
 
   return (
     <div className="container max-w-4xl my-10">
@@ -222,13 +244,124 @@ const QRGenerator = () => {
 
             {type === "wifi" && (
               <>
-                <Input placeholder="SSID" onChange={(e) => setField("ssid", e.target.value)} />
-                <Input placeholder="Password" onChange={(e) => setField("password", e.target.value)} />
+                <Input
+                  placeholder="SSID"
+                  onChange={(e) => setField("ssid", e.target.value)}
+                />
+                <Input
+                  placeholder="Password"
+                  onChange={(e) => setField("password", e.target.value)}
+                />
+                <Select
+                  value={form.encryption || "WPA"}
+                  onValueChange={(v) => setField("encryption", v)}
+                >
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Encryption" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="WPA">WPA/WPA2</SelectItem>
+                    <SelectItem value="WEP">WEP</SelectItem>
+                    <SelectItem value="nopass">No password</SelectItem>
+                  </SelectContent>
+                </Select>
               </>
             )}
 
             {type === "call" && (
-              <Input placeholder="Phone number" onChange={(e) => setField("number", e.target.value)} />
+              <Input
+                placeholder="Phone number"
+                onChange={(e) => setField("number", e.target.value)}
+              />
+            )}
+
+            {type === "sms" && (
+              <>
+                <Input
+                  placeholder="Phone number"
+                  onChange={(e) => setField("number", e.target.value)}
+                />
+                <Input
+                  placeholder="Message (optional)"
+                  onChange={(e) => setField("message", e.target.value)}
+                />
+              </>
+            )}
+
+            {type === "mail" && (
+              <>
+                <Input
+                  placeholder="Email address"
+                  onChange={(e) => setField("email", e.target.value)}
+                />
+                <Input
+                  placeholder="Subject (optional)"
+                  onChange={(e) => setField("subject", e.target.value)}
+                />
+                <Textarea
+                  placeholder="Body (optional)"
+                  onChange={(e) => setField("body", e.target.value)}
+                />
+              </>
+            )}
+
+            {type === "location" && (
+              <>
+                <Input
+                  placeholder="Latitude"
+                  onChange={(e) => setField("latitude", e.target.value)}
+                />
+                <Input
+                  placeholder="Longitude"
+                  onChange={(e) => setField("longitude", e.target.value)}
+                />
+              </>
+            )}
+
+            {type === "event" && (
+              <>
+                <Input
+                  placeholder="Event title"
+                  onChange={(e) => setField("title", e.target.value)}
+                />
+                <Input
+                  placeholder="Location (optional)"
+                  onChange={(e) => setField("location", e.target.value)}
+                />
+                <Input
+                  type="datetime-local"
+                  onChange={(e) => setField("startDate", e.target.value)}
+                />
+                <Input
+                  type="datetime-local"
+                  onChange={(e) => setField("endDate", e.target.value)}
+                />
+              </>
+            )}
+
+            {type === "vcard" && (
+              <>
+                <Input
+                  placeholder="First Name"
+                  onChange={(e) => setField("firstName", e.target.value)}
+                />
+                <Input
+                  placeholder="Last Name"
+                  onChange={(e) => setField("lastName", e.target.value)}
+                />
+                <Input
+                  placeholder="Phone Number"
+                  onChange={(e) => setField("phone", e.target.value)}
+                />
+                <Input
+                  placeholder="Email"
+                  onChange={(e) => setField("email", e.target.value)}
+                />
+                <Input
+                  placeholder="Organization (optional)"
+                  onChange={(e) => setField("organization", e.target.value)}
+                />
+              </>
             )}
           </div>
 
@@ -249,21 +382,7 @@ const QRGenerator = () => {
 
           <div className="flex-1 flex flex-col items-center justify-center border rounded-xl mb-6 gap-3">
             {qrImage ? (
-              <>
-                <img src={qrImage} className="w-48 h-48" />
-
-                {type === "url" && form.url && (
-                  <a
-                    href={form.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm text-blue-600 underline break-all flex items-center gap-1"
-                  >
-                    {form.url}
-                    <ExternalLink size={14} />
-                  </a>
-                )}
-              </>
+              <img src={qrImage} className="w-48 h-48" />
             ) : (
               <QrCode className="h-12 w-12 opacity-50" />
             )}
@@ -286,6 +405,7 @@ const QRGenerator = () => {
                 onClick={() => window.open(form.url, "_blank")}
                 disabled={!form.url}
               >
+                <ExternalLink className="mr-2 h-4 w-4" />
                 Open Link
               </Button>
             ) : (
