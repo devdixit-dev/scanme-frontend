@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { Upload, Copy, Check, Shield, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const API_URL = "http://localhost:3000/api/scan/upload";
+const API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/scan/upload`
 
 /* ------------------ user id helper ------------------ */
 const getUserId = () => {

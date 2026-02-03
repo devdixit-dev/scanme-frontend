@@ -11,7 +11,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
-const API_URL = "http://localhost:3000/api/generate";
+const API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/generate`
 
 /* ---------- user id helper ---------- */
 const getUserId = () => {
