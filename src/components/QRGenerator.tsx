@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { QrCode, Copy, Check, Download } from "lucide-react";
+import { QrCode, Copy, Check, Download, ExternalLink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
-const API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/generate`
+const API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/generate`;
 
 /* ---------- user id helper ---------- */
 const getUserId = () => {
@@ -45,7 +45,7 @@ const QRGenerator = () => {
   const setField = (k: string, v: string) =>
     setForm((p) => ({ ...p, [k]: v }));
 
-  /* ---------- PAYLOAD BUILDER (100% BACKEND MATCH) ---------- */
+  /* ---------- PAYLOAD BUILDER ---------- */
   const buildPayload = () => {
     switch (type) {
       case "url":
@@ -73,9 +73,6 @@ const QRGenerator = () => {
             phone: form.phone,
             email: form.email,
             organization: form.organization,
-            title: form.title,
-            url: form.url,
-            address: form.address,
           },
         };
 
@@ -119,7 +116,6 @@ const QRGenerator = () => {
           data: {
             title: form.title,
             location: form.location,
-            description: form.description,
             startDate: form.startDate,
             endDate: form.endDate,
           },
@@ -154,7 +150,6 @@ const QRGenerator = () => {
       }
 
       setQrImage(json.data.imageUrl);
-      setForm({});
     } catch (e) {
       setError(e.message || "Something went wrong");
     } finally {
@@ -162,145 +157,150 @@ const QRGenerator = () => {
     }
   };
 
-  const copyUrl = async () => {
+  const copyQrImageUrl = async () => {
     if (!qrImage) return;
     await navigator.clipboard.writeText(qrImage);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const isValid =
+    (type === "url" && !!form.url) ||
+    (type === "text" && !!form.text) ||
+    type !== "url";
+
   return (
-    <div className="container max-w-4xl my-8">
+    <div className="container max-w-4xl my-10">
       <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4">
-          Generate QR Code
-        </h2>
+        <h2 className="text-4xl font-bold mb-3">QR Code Generator</h2>
         <p className="text-muted-foreground">
-          Choose a QR type, fill details, generate instantly
+          Create smart, scannable QR codes instantly
         </p>
       </div>
 
-      <section className="py-16">
-        <div className="container max-w-4xl grid md:grid-cols-2 gap-6">
-          {/* INPUT */}
-          <div className="p-10 border rounded-2xl bg-background">
-            <Select
-              value={type}
-              onValueChange={(v) => {
-                setType(v as QRType);
-                setForm({});
-              }}
-            >
-              <SelectTrigger className="h-12 mb-6">
-                <SelectValue placeholder="Select QR type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="url">URL</SelectItem>
-                <SelectItem value="text">Text</SelectItem>
-                <SelectItem value="wifi">WiFi</SelectItem>
-                <SelectItem value="vcard">vCard</SelectItem>
-                <SelectItem value="sms">SMS</SelectItem>
-                <SelectItem value="call">Call</SelectItem>
-                <SelectItem value="mail">Email</SelectItem>
-                <SelectItem value="location">Location</SelectItem>
-                <SelectItem value="event">Event</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* INPUT */}
+        <div className="p-8 border rounded-2xl bg-background">
+          <Select
+            value={type}
+            onValueChange={(v) => {
+              setType(v as QRType);
+              setForm({});
+              setQrImage(null);
+            }}
+          >
+            <SelectTrigger className="h-12 mb-6">
+              <SelectValue placeholder="Select QR type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="url">URL</SelectItem>
+              <SelectItem value="text">Text</SelectItem>
+              <SelectItem value="wifi">WiFi</SelectItem>
+              <SelectItem value="vcard">vCard</SelectItem>
+              <SelectItem value="sms">SMS</SelectItem>
+              <SelectItem value="call">Call</SelectItem>
+              <SelectItem value="mail">Email</SelectItem>
+              <SelectItem value="location">Location</SelectItem>
+              <SelectItem value="event">Event</SelectItem>
+            </SelectContent>
+          </Select>
 
-            <div className="space-y-3 min-h-[260px]">
-              {type === "url" && (
-                <Input placeholder="https://example.com" onChange={(e) => setField("url", e.target.value)} />
-              )}
+          <div className="space-y-3 min-h-[260px]">
+            {type === "url" && (
+              <Input
+                placeholder="https://example.com"
+                onChange={(e) => setField("url", e.target.value)}
+              />
+            )}
 
-              {type === "text" && (
-                <Input placeholder="Text" onChange={(e) => setField("text", e.target.value)} />
-              )}
+            {type === "text" && (
+              <Input
+                placeholder="Enter text"
+                onChange={(e) => setField("text", e.target.value)}
+              />
+            )}
 
-              {type === "wifi" && (
-                <>
-                  <Input placeholder="SSID" onChange={(e) => setField("ssid", e.target.value)} />
-                  <Input placeholder="Password" onChange={(e) => setField("password", e.target.value)} />
-                  <Input placeholder="Encryption (WPA/WEP/nopass)" onChange={(e) => setField("encryption", e.target.value)} />
-                </>
-              )}
+            {type === "wifi" && (
+              <>
+                <Input placeholder="SSID" onChange={(e) => setField("ssid", e.target.value)} />
+                <Input placeholder="Password" onChange={(e) => setField("password", e.target.value)} />
+              </>
+            )}
 
-              {type === "vcard" && (
-                <>
-                  <Input placeholder="First name" onChange={(e) => setField("firstName", e.target.value)} />
-                  <Input placeholder="Last name" onChange={(e) => setField("lastName", e.target.value)} />
-                  <Input placeholder="Phone" onChange={(e) => setField("phone", e.target.value)} />
-                  <Input placeholder="Email" onChange={(e) => setField("email", e.target.value)} />
-                  <Input placeholder="Organization" onChange={(e) => setField("organization", e.target.value)} />
-                </>
-              )}
-
-              {type === "sms" && (
-                <>
-                  <Input placeholder="Phone number" onChange={(e) => setField("number", e.target.value)} />
-                  <Input placeholder="Message" onChange={(e) => setField("message", e.target.value)} />
-                </>
-              )}
-
-              {type === "call" && (
-                <Input placeholder="Phone number" onChange={(e) => setField("number", e.target.value)} />
-              )}
-
-              {type === "mail" && (
-                <>
-                  <Input placeholder="Email" onChange={(e) => setField("email", e.target.value)} />
-                  <Input placeholder="Subject" onChange={(e) => setField("subject", e.target.value)} />
-                  <Input placeholder="Body" onChange={(e) => setField("body", e.target.value)} />
-                </>
-              )}
-
-              {type === "location" && (
-                <>
-                  <Input placeholder="Latitude" onChange={(e) => setField("latitude", e.target.value)} />
-                  <Input placeholder="Longitude" onChange={(e) => setField("longitude", e.target.value)} />
-                </>
-              )}
-
-              {type === "event" && (
-                <>
-                  <Input placeholder="Title" onChange={(e) => setField("title", e.target.value)} />
-                  <Input placeholder="Location" onChange={(e) => setField("location", e.target.value)} />
-                  <Input placeholder="Start (YYYYMMDDTHHmmss)" onChange={(e) => setField("startDate", e.target.value)} />
-                  <Input placeholder="End (YYYYMMDDTHHmmss)" onChange={(e) => setField("endDate", e.target.value)} />
-                </>
-              )}
-            </div>
-
-            {error && <p className="text-sm text-red-500 mt-4">{error}</p>}
-
-            <Button className="w-full mt-6" onClick={handleGenerate} disabled={loading}>
-              {loading ? "Generating..." : "Generate QR"}
-            </Button>
+            {type === "call" && (
+              <Input placeholder="Phone number" onChange={(e) => setField("number", e.target.value)} />
+            )}
           </div>
 
-          {/* OUTPUT */}
-          <div className="p-10 border rounded-2xl flex flex-col">
-            <h3 className="font-semibold mb-4">Your QR</h3>
+          {error && <p className="text-sm text-red-500 mt-4">{error}</p>}
 
-            <div className="flex-1 flex items-center justify-center border rounded-xl mb-6">
-              {qrImage ? (
+          <Button
+            className="w-full mt-6"
+            onClick={handleGenerate}
+            disabled={!isValid || loading}
+          >
+            {loading ? "Generating..." : "Generate QR"}
+          </Button>
+        </div>
+
+        {/* OUTPUT */}
+        <div className="p-8 border rounded-2xl flex flex-col">
+          <h3 className="font-semibold mb-4">Result</h3>
+
+          <div className="flex-1 flex flex-col items-center justify-center border rounded-xl mb-6 gap-3">
+            {qrImage ? (
+              <>
                 <img src={qrImage} className="w-48 h-48" />
-              ) : (
-                <QrCode className="h-12 w-12 opacity-50" />
-              )}
-            </div>
 
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={copyUrl} disabled={!qrImage}>
-                {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                {copied ? "Copied" : "Copy URL"}
+                {type === "url" && form.url && (
+                  <a
+                    href={form.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-blue-600 underline break-all flex items-center gap-1"
+                  >
+                    {form.url}
+                    <ExternalLink size={14} />
+                  </a>
+                )}
+              </>
+            ) : (
+              <QrCode className="h-12 w-12 opacity-50" />
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={copyQrImageUrl}
+              disabled={!qrImage}
+            >
+              {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+              {copied ? "Copied" : "Copy Image URL"}
+            </Button>
+
+            {type === "url" ? (
+              <Button
+                className="flex-1"
+                onClick={() => window.open(form.url, "_blank")}
+                disabled={!form.url}
+              >
+                Open Link
               </Button>
-              <Button className="flex-1" onClick={() => window.open(qrImage || "")} disabled={!qrImage}>
-                <Download className="mr-2 h-4 w-4" /> Download
+            ) : (
+              <Button
+                className="flex-1"
+                onClick={() => window.open(qrImage || "")}
+                disabled={!qrImage}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download
               </Button>
-            </div>
+            )}
           </div>
         </div>
-      </section>
+      </div>
     </div>
   );
 };
